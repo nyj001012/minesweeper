@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,10 +6,12 @@ import App from '../../src/app/App';
 
 describe('island minesweeper UI', () => {
   beforeEach(() => {
-    vi.spyOn(globalThis.crypto, 'getRandomValues').mockImplementation((array) => {
-      if (array instanceof Uint32Array) array[0] = 829;
-      return array as typeof array;
-    });
+    vi.spyOn(globalThis.crypto, 'getRandomValues').mockImplementation(
+      (array) => {
+        if (array instanceof Uint32Array) array[0] = 829;
+        return array as typeof array;
+      },
+    );
   });
 
   afterEach(() => {
@@ -38,28 +40,35 @@ describe('island minesweeper UI', () => {
     ['5.5', '7'],
     ['5', '4'],
     ['5', '41'],
-  ])('keeps the current board and explains invalid size %sx%s', async (rows, columns) => {
-    const user = userEvent.setup();
-    render(<App />);
-    const boardBefore = screen.getByRole('grid', { name: '지뢰찾기 보드' });
-    const cellCountBefore = within(boardBefore).getAllByRole('button').length;
-    fireEvent.change(screen.getByRole('spinbutton', { name: '행' }), {
-      target: { value: rows },
-    });
-    fireEvent.change(screen.getByRole('spinbutton', { name: '열' }), {
-      target: { value: columns },
-    });
-    await user.click(screen.getByRole('button', { name: '새 게임' }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/5.*40|정수/);
-    expect(
-      within(screen.getByRole('grid', { name: '지뢰찾기 보드' })).getAllByRole('button'),
-    ).toHaveLength(cellCountBefore);
-  });
+  ])(
+    'keeps the current board and explains invalid size %sx%s',
+    async (rows, columns) => {
+      const user = userEvent.setup();
+      render(<App />);
+      const boardBefore = screen.getByRole('grid', { name: '지뢰찾기 보드' });
+      const cellCountBefore = within(boardBefore).getAllByRole('button').length;
+      fireEvent.change(screen.getByRole('spinbutton', { name: '행' }), {
+        target: { value: rows },
+      });
+      fireEvent.change(screen.getByRole('spinbutton', { name: '열' }), {
+        target: { value: columns },
+      });
+      await user.click(screen.getByRole('button', { name: '새 게임' }));
+      expect(screen.getByRole('alert')).toHaveTextContent(/5.*40|정수/);
+      expect(
+        within(
+          screen.getByRole('grid', { name: '지뢰찾기 보드' }),
+        ).getAllByRole('button'),
+      ).toHaveLength(cellCountBefore);
+    },
+  );
 
   it('reveals ground with left click and toggles a flag with context menu', async () => {
     const user = userEvent.setup();
     render(<App />);
-    const hidden = screen.getAllByRole('button', { name: /숨김/ }).find((cell) => !cell.disabled)!;
+    const hidden = screen
+      .getAllByRole<HTMLButtonElement>('button', { name: /숨김/ })
+      .find((cell) => !cell.disabled)!;
     expect(hidden).toBeDefined();
     fireEvent.contextMenu(hidden);
     expect(hidden).toHaveAccessibleName(/깃발/);
@@ -79,20 +88,21 @@ describe('island minesweeper UI', () => {
     expect(rock.outerHTML).toBe(before);
   });
 
-  it('starts at 0 seconds only after the first valid ground reveal', async () => {
+  it('starts at 0 seconds only after the first valid ground reveal', () => {
     vi.useFakeTimers();
     vi.setSystemTime(10_000);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<App />);
     const timer = screen.getByRole('timer');
     expect(timer).toHaveTextContent('0초');
-    vi.advanceTimersByTime(2_000);
+    act(() => vi.advanceTimersByTime(2_000));
     expect(timer).toHaveTextContent('0초');
 
-    const hidden = screen.getAllByRole('button', { name: /숨김/ }).find((cell) => !cell.disabled)!;
-    await user.click(hidden);
+    const hidden = screen
+      .getAllByRole<HTMLButtonElement>('button', { name: /숨김/ })
+      .find((cell) => !cell.disabled)!;
+    fireEvent.click(hidden);
     expect(timer).toHaveTextContent('0초');
-    vi.advanceTimersByTime(1_100);
+    act(() => vi.advanceTimersByTime(1_100));
     expect(timer).toHaveTextContent('1초');
   });
 
@@ -104,8 +114,12 @@ describe('island minesweeper UI', () => {
     for (let attempts = 0; attempts < 1_600; attempts += 1) {
       if (screen.queryByText(/승리|패배/)) break;
       const next = within(board)
-        .getAllByRole('button')
-        .find((cell) => !cell.disabled && /숨김/.test(cell.getAttribute('aria-label') ?? ''));
+        .getAllByRole<HTMLButtonElement>('button')
+        .find(
+          (cell) =>
+            !cell.disabled &&
+            /숨김/.test(cell.getAttribute('aria-label') ?? ''),
+        );
       if (!next) break;
       await user.click(next);
     }
@@ -123,12 +137,41 @@ describe('island minesweeper UI', () => {
     expect(announcement).toHaveTextContent(/준비/);
   });
 
+  it('blocks interaction after a clock error and recovers through a new game', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    render(<App />);
+    const hidden = screen.getAllByRole<HTMLButtonElement>('button', {
+      name: /숨김/,
+    })[0];
+    fireEvent.click(hidden);
+    vi.setSystemTime(9_000);
+    act(() => vi.advanceTimersByTime(250));
+    expect(screen.getByRole('alert')).toHaveTextContent(/새 게임|다시 시작/);
+    for (const cell of within(screen.getByRole('grid')).getAllByRole(
+      'button',
+    )) {
+      expect(cell).toBeDisabled();
+    }
+    fireEvent.click(screen.getByRole('button', { name: '새 게임' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/준비/);
+    expect(screen.getByRole('timer')).toHaveTextContent('0초');
+    expect(
+      screen
+        .getAllByRole<HTMLButtonElement>('button', { name: /숨김/ })
+        .some((cell) => !cell.disabled),
+    ).toBe(true);
+  });
+
   it('does not serialize hidden mine truth into the rendered UI', () => {
     const { container } = render(<App />);
     for (const hidden of screen.getAllByRole('button', { name: /숨김/ })) {
       expect(hidden).not.toHaveAttribute('data-has-mine');
       expect(hidden).not.toHaveAttribute('value', 'mine');
-      expect(hidden.outerHTML).not.toMatch(/hasMine|has-mine|mine=(?:"|')?true/i);
+      expect(hidden.outerHTML).not.toMatch(
+        /hasMine|has-mine|mine=(?:"|')?true/i,
+      );
     }
     expect(container.querySelector('[data-has-mine]')).not.toBeInTheDocument();
   });

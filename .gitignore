@@ -1,0 +1,15 @@
+# web-sdlc-harness 런타임 산출물 (재현 가능하므로 추적하지 않는다)
+.claude/_workspace/log/
+.claude/_workspace/handoff/
+.claude/_workspace/02_issues/
+.codex/_workspace/log/
+.codex/_workspace/handoff/
+.codex/_workspace/02_issues/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.env.local
+.env.*.local

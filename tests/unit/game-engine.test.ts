@@ -241,7 +241,7 @@ describe('game transitions', () => {
       initial,
       initial.cells.findIndex((cell) => cell.terrain === 'ground'),
     );
-    let running = reveal(initial, safe, 1_000);
+    const running = reveal(initial, safe, 1_000);
     const mine = coordinateOf(
       running,
       running.cells.findIndex((cell) => cell.terrain === 'ground' && cell.hasMine),
@@ -293,4 +293,3 @@ describe('game transitions', () => {
     expect(state.endedAtMs).not.toBeNull();
   });
 });
-
