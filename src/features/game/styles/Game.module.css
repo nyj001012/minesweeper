@@ -1,0 +1,232 @@
+:global(*) {
+  box-sizing: border-box;
+}
+:global(body) {
+  margin: 0;
+  min-width: 320px;
+  color: #173d3c;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  background:
+    radial-gradient(ellipse at 20% 0%, #c7eee2, transparent 50%),
+    linear-gradient(145deg, #dbeee7, #76b7bf);
+  min-height: 100vh;
+}
+:global(button),
+:global(input) {
+  font: inherit;
+}
+:global(button:focus-visible),
+:global(input:focus-visible) {
+  outline: 3px solid #002f57;
+  outline-offset: 3px;
+}
+.app {
+  max-width: 1050px;
+  margin: auto;
+  padding: 48px 24px 28px;
+}
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.header h1 {
+  font-size: clamp(2rem, 6vw, 3.3rem);
+  letter-spacing: -0.06em;
+  margin: 8px 0 16px;
+}
+.header p {
+  line-height: 1.7;
+}
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  font-weight: 800;
+  color: #235b5c;
+}
+.panel {
+  background: #fffaf0;
+  padding: 28px;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px #13454a24;
+  border: 1px solid #ffffffb0;
+}
+.setup {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.setup label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.setup input {
+  width: 78px;
+  padding: 10px;
+  border: 1px solid #809c8e;
+  border-radius: 8px;
+  background: #fff;
+  color: #173d3c;
+}
+.setup > span {
+  padding-bottom: 12px;
+}
+.newGame {
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 24px;
+  background: #205d4c;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+.newGame:hover {
+  background: #154838;
+}
+.error {
+  flex-basis: 100%;
+  text-align: center;
+  color: #a51f21;
+}
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 24px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.status {
+  text-align: center;
+  font-size: 0.9rem;
+  min-height: 1.5em;
+  margin: 16px 0 22px;
+}
+.boardViewport {
+  max-width: 100%;
+  max-height: 65vh;
+  overflow: auto;
+  padding: 12px;
+  background: #4e979e;
+  border: 1px solid #31787e;
+  border-radius: 14px;
+}
+.board {
+  --cell-size: 34px;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), var(--cell-size));
+  gap: 3px;
+  width: max-content;
+  margin: auto;
+}
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border: 0;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 0;
+  color: #173d3c;
+  opacity: 1;
+}
+.hidden {
+  background: #aac682;
+  box-shadow:
+    inset 0 -3px #66804e,
+    inset 0 1px #dce6b0;
+  cursor: pointer;
+}
+.hidden:not(:disabled):hover {
+  background: #c4d99d;
+  transform: translateY(-1px);
+}
+.revealed {
+  background: #f3deb0;
+  box-shadow: inset 0 1px 2px #92724040;
+  color: #173952;
+}
+.revealed[data-count='1'] {
+  color: #174d85;
+}
+.revealed[data-count='2'] {
+  color: #245c30;
+}
+.revealed[data-count='3'] {
+  color: #9a2923;
+}
+.revealed[data-count='4'] {
+  color: #593981;
+}
+.revealed[data-count='5'] {
+  color: #85420d;
+}
+.revealed[data-count='6'] {
+  color: #12616a;
+}
+.revealed[data-count='7'] {
+  color: #6b354f;
+}
+.revealed[data-count='8'] {
+  color: #3f4650;
+}
+.rock {
+  background: #7a8783;
+  color: #f5f5e9;
+  text-shadow: 1px 2px #424e4c;
+  box-shadow:
+    inset 0 -3px #4f605b,
+    inset 0 2px #aab5a9;
+  font-size: 1.45rem;
+}
+.mine {
+  background: #ac3029;
+  color: white;
+  font-size: 1.6rem;
+}
+.instructions {
+  text-align: center;
+  color: #536356;
+  font-size: 0.78rem;
+  line-height: 1.9;
+  margin: 20px 0 0;
+}
+.footer {
+  margin-top: 24px;
+  text-align: center;
+  color: #244f51;
+  font-size: 0.76rem;
+}
+@media (max-width: 560px) {
+  .app {
+    padding: 24px 12px;
+  }
+  .panel {
+    padding: 20px 12px;
+    border-radius: 16px;
+  }
+  .boardViewport {
+    padding: 8px;
+  }
+  .board {
+    --cell-size: 30px;
+  }
+  .setup {
+    gap: 10px;
+  }
+  .newGame {
+    padding-inline: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hidden:not(:disabled):hover {
+    transform: none;
+  }
+}
