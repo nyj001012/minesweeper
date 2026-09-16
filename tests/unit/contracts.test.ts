@@ -21,12 +21,14 @@ describe('public game contract', () => {
       maxRockClusterSize: 4,
       adjacentProtectionWeights: [5, 10, 15, 20, 20, 15, 10, 5],
     });
-    expect(DEFAULT_GAME_CONFIG.adjacentProtectionWeights.every(Number.isInteger)).toBe(
-      true,
-    );
-    expect(DEFAULT_GAME_CONFIG.adjacentProtectionWeights.every((weight) => weight > 0)).toBe(
-      true,
-    );
+    expect(
+      DEFAULT_GAME_CONFIG.adjacentProtectionWeights.every(Number.isInteger),
+    ).toBe(true);
+    expect(
+      DEFAULT_GAME_CONFIG.adjacentProtectionWeights.every(
+        (weight) => weight > 0,
+      ),
+    ).toBe(true);
     expect(
       DEFAULT_GAME_CONFIG.adjacentProtectionWeights.reduce(
         (sum, weight) => sum + weight,
@@ -56,7 +58,10 @@ describe('public game contract', () => {
     ['5', '7', { rows: 5, columns: 7 }],
     ['40', '20', { rows: 40, columns: 20 }],
   ])('accepts a rectangular %sx%s board', (rows, columns, expected) => {
-    expect(parseBoardSize({ rows, columns })).toEqual({ ok: true, size: expected });
+    expect(parseBoardSize({ rows, columns })).toEqual({
+      ok: true,
+      size: expected,
+    });
   });
 
   it('rejects invalid generation settings instead of creating a partial game', () => {
@@ -72,19 +77,30 @@ describe('public game contract', () => {
       config: invalidConfig,
     });
     expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('Expected invalid configuration to be rejected');
+    if (result.ok)
+      throw new Error('Expected invalid configuration to be rejected');
     expect(result.errors).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: 'INVALID_PROTECTION_WEIGHTS', field: 'config' }),
+        expect.objectContaining({
+          code: 'INVALID_PROTECTION_WEIGHTS',
+          field: 'config',
+        }),
       ]),
     );
   });
 
   it('does not expose a mine field on the hidden cell view union or runtime view model', () => {
-    type HiddenView = Extract<CellView, { terrain: 'ground'; visibility: 'hidden' }>;
+    type HiddenView = Extract<
+      CellView,
+      { terrain: 'ground'; visibility: 'hidden' }
+    >;
     expectTypeOf<HiddenView>().not.toHaveProperty('hasMine');
 
-    const state = reveal(createAcceptedGame(10, 10, 829, 100), { row: 0, column: 0 }, 100);
+    const state = reveal(
+      createAcceptedGame(10, 10, 829, 100),
+      { row: 0, column: 0 },
+      100,
+    );
     const view = selectGameViewModel(state);
     for (const cell of view.cells) {
       if (cell.terrain === 'ground' && cell.visibility === 'hidden') {
@@ -94,4 +110,3 @@ describe('public game contract', () => {
     }
   });
 });
-

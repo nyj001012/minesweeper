@@ -28,7 +28,8 @@ export function createAcceptedGame(
 
 export function applyTransition(result: GameTransitionResult): GameState {
   expect(result.ok).toBe(true);
-  if (!result.ok) throw new Error(`Expected transition to succeed: ${result.error.code}`);
+  if (!result.ok)
+    throw new Error(`Expected transition to succeed: ${result.error.code}`);
   return result.state;
 }
 
@@ -53,7 +54,10 @@ export function coordinateOf(state: GameState, index: number): Coordinate {
   };
 }
 
-export function neighbors(state: GameState, coordinate: Coordinate): Coordinate[] {
+export function neighbors(
+  state: GameState,
+  coordinate: Coordinate,
+): Coordinate[] {
   const result: Coordinate[] = [];
   for (let rowDelta = -1; rowDelta <= 1; rowDelta += 1) {
     for (let columnDelta = -1; columnDelta <= 1; columnDelta += 1) {
@@ -72,4 +76,3 @@ export function neighbors(state: GameState, coordinate: Coordinate): Coordinate[
   }
   return result;
 }
-

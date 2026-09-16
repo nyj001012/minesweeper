@@ -19,7 +19,9 @@ import {
 
 function rockComponents(state: GameState): number[] {
   const pending = new Set(
-    state.cells.flatMap((cell, index) => (cell.terrain === 'rock' ? [index] : [])),
+    state.cells.flatMap((cell, index) =>
+      cell.terrain === 'rock' ? [index] : [],
+    ),
   );
   const sizes: number[] = [];
   while (pending.size > 0) {
@@ -76,15 +78,20 @@ describe('game generation', () => {
     [5, 7, 11],
     [10, 10, 2026],
     [40, 20, 0xffff_ffff],
-  ])('creates exactly 8%% rocks with connected components of at most four on %ix%i', (rows, columns, seed) => {
-    const state = createAcceptedGame(rows, columns, seed);
-    const rocks = state.cells.filter((cell) => cell.terrain === 'rock');
-    expect(rocks).toHaveLength(Math.round(rows * columns * DEFAULT_GAME_CONFIG.rockRatio));
-    expect(Math.max(...rockComponents(state))).toBeLessThanOrEqual(
-      DEFAULT_GAME_CONFIG.maxRockClusterSize,
-    );
-    expect(rocks.every((cell) => Object.keys(cell).length === 1)).toBe(true);
-  });
+  ])(
+    'creates exactly 8%% rocks with connected components of at most four on %ix%i',
+    (rows, columns, seed) => {
+      const state = createAcceptedGame(rows, columns, seed);
+      const rocks = state.cells.filter((cell) => cell.terrain === 'rock');
+      expect(rocks).toHaveLength(
+        Math.round(rows * columns * DEFAULT_GAME_CONFIG.rockRatio),
+      );
+      expect(Math.max(...rockComponents(state))).toBeLessThanOrEqual(
+        DEFAULT_GAME_CONFIG.maxRockClusterSize,
+      );
+      expect(rocks.every((cell) => Object.keys(cell).length === 1)).toBe(true);
+    },
+  );
 
   it('is reproducible for a fixed seed and defers mines until the first valid reveal', () => {
     const first = createAcceptedGame(12, 9, 123456, 500);
@@ -92,37 +99,53 @@ describe('game generation', () => {
     expect(second).toEqual(first);
     expect(first.minesPlaced).toBe(false);
     expect(first.totalMineCount).toBe(0);
-    expect(first.cells.every((cell) => cell.terrain === 'rock' || !cell.hasMine)).toBe(true);
-
-    const firstPlayableIndex = first.cells.findIndex((cell) => cell.terrain === 'ground');
     expect(
-      reveal(first, coordinateOf(first, firstPlayableIndex), 500),
-    ).toEqual(reveal(second, coordinateOf(second, firstPlayableIndex), 500));
+      first.cells.every((cell) => cell.terrain === 'rock' || !cell.hasMine),
+    ).toBe(true);
+
+    const firstPlayableIndex = first.cells.findIndex(
+      (cell) => cell.terrain === 'ground',
+    );
+    expect(reveal(first, coordinateOf(first, firstPlayableIndex), 500)).toEqual(
+      reveal(second, coordinateOf(second, firstPlayableIndex), 500),
+    );
   });
 
   it('places 13-17% mines after protecting the first click and weighted adjacent sample', () => {
     for (const seed of [1, 17, 829, 65_537, 0xffff_fffe]) {
       const initial = createAcceptedGame(20, 17, seed, 1_000);
-      const clickedIndex = initial.cells.findIndex((cell) => cell.terrain === 'ground');
+      const clickedIndex = initial.cells.findIndex(
+        (cell) => cell.terrain === 'ground',
+      );
       const clicked = coordinateOf(initial, clickedIndex);
       const state = reveal(initial, clicked, 1_000);
       expect(state.placement).not.toBeNull();
       const placement = state.placement!;
-      const playableCount = state.cells.filter((cell) => cell.terrain === 'ground').length;
+      const playableCount = state.cells.filter(
+        (cell) => cell.terrain === 'ground',
+      ).length;
       expect(placement.sampledMineRatio).toBeGreaterThanOrEqual(0.13);
       expect(placement.sampledMineRatio).toBeLessThanOrEqual(0.17);
       expect(state.totalMineCount).toBe(
         Math.floor(playableCount * placement.sampledMineRatio),
       );
-      expect(state.cells.filter((cell) => cell.terrain === 'ground' && cell.hasMine)).toHaveLength(
-        state.totalMineCount,
+      expect(
+        state.cells.filter((cell) => cell.terrain === 'ground' && cell.hasMine),
+      ).toHaveLength(state.totalMineCount);
+      expect(state.cells[indexOf(state, clicked)]).toMatchObject({
+        hasMine: false,
+      });
+      expect(placement.requestedAdjacentProtectionCount).toBeGreaterThanOrEqual(
+        1,
       );
-      expect(state.cells[indexOf(state, clicked)]).toMatchObject({ hasMine: false });
-      expect(placement.requestedAdjacentProtectionCount).toBeGreaterThanOrEqual(1);
       expect(placement.requestedAdjacentProtectionCount).toBeLessThanOrEqual(8);
-      expect(new Set(placement.protectedCoordinates.map((item) => `${item.row}:${item.column}`)).size).toBe(
-        placement.protectedCoordinates.length,
-      );
+      expect(
+        new Set(
+          placement.protectedCoordinates.map(
+            (item) => `${item.row}:${item.column}`,
+          ),
+        ).size,
+      ).toBe(placement.protectedCoordinates.length);
       for (const protectedCoordinate of placement.protectedCoordinates) {
         expect(neighbors(state, clicked)).toContainEqual(protectedCoordinate);
         expect(state.cells[indexOf(state, protectedCoordinate)]).toMatchObject({
@@ -142,7 +165,9 @@ describe('game generation', () => {
       const state = reveal(initial, center);
       observed.add(state.placement!.requestedAdjacentProtectionCount);
     }
-    expect([...observed].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect([...observed].sort((a, b) => a - b)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8,
+    ]);
   });
 });
 
@@ -158,7 +183,11 @@ describe('game transitions', () => {
       { type: 'toggle-flag' as const, coordinate: rock, nowMs: 300 },
     ]) {
       const result = transitionGame(state, action);
-      expect(result).toMatchObject({ ok: true, changed: false, reason: 'ROCK_CELL' });
+      expect(result).toMatchObject({
+        ok: true,
+        changed: false,
+        reason: 'ROCK_CELL',
+      });
       expect(result.state).toBe(state);
       expect(result.state.startedAtMs).toBeNull();
     }
@@ -188,9 +217,15 @@ describe('game transitions', () => {
       initial.cells.findIndex((cell) => cell.terrain === 'ground'),
     );
     const flagged = applyTransition(
-      transitionGame(initial, { type: 'toggle-flag', coordinate: playable, nowMs: 1 }),
+      transitionGame(initial, {
+        type: 'toggle-flag',
+        coordinate: playable,
+        nowMs: 1,
+      }),
     );
-    expect(flagged.cells[indexOf(flagged, playable)]).toMatchObject({ isFlagged: true });
+    expect(flagged.cells[indexOf(flagged, playable)]).toMatchObject({
+      isFlagged: true,
+    });
     const revealResult = transitionGame(flagged, {
       type: 'reveal-cell',
       coordinate: playable,
@@ -214,17 +249,21 @@ describe('game transitions', () => {
 
     state.cells.forEach((cell, index) => {
       if (cell.terrain === 'rock' || cell.hasMine) return;
-      const adjacentMines = neighbors(state, coordinateOf(state, index)).filter((coordinate) => {
-        const neighbor = state.cells[indexOf(state, coordinate)];
-        return neighbor.terrain === 'ground' && neighbor.hasMine;
-      }).length;
+      const adjacentMines = neighbors(state, coordinateOf(state, index)).filter(
+        (coordinate) => {
+          const neighbor = state.cells[indexOf(state, coordinate)];
+          return neighbor.terrain === 'ground' && neighbor.hasMine;
+        },
+      ).length;
       expect(cell.adjacentMineCount).toBe(adjacentMines);
     });
 
     const expected = expectedFlood(state, start);
     const actuallyRevealed = new Set(
       state.cells.flatMap((cell, index) =>
-        cell.terrain === 'ground' && cell.visibility === 'revealed' && !cell.hasMine
+        cell.terrain === 'ground' &&
+        cell.visibility === 'revealed' &&
+        !cell.hasMine
           ? [index]
           : [],
       ),
@@ -244,7 +283,9 @@ describe('game transitions', () => {
     const running = reveal(initial, safe, 1_000);
     const mine = coordinateOf(
       running,
-      running.cells.findIndex((cell) => cell.terrain === 'ground' && cell.hasMine),
+      running.cells.findIndex(
+        (cell) => cell.terrain === 'ground' && cell.hasMine,
+      ),
     );
     const lost = reveal(running, mine, 2_500);
     expect(lost.status).toBe('lost');
@@ -272,7 +313,10 @@ describe('game transitions', () => {
     );
     let state = reveal(initial, first, 10);
     const mineIndex = state.cells.findIndex(
-      (cell) => cell.terrain === 'ground' && cell.hasMine && cell.visibility === 'hidden',
+      (cell) =>
+        cell.terrain === 'ground' &&
+        cell.hasMine &&
+        cell.visibility === 'hidden',
     );
     if (mineIndex >= 0) {
       state = applyTransition(
@@ -283,9 +327,17 @@ describe('game transitions', () => {
         }),
       );
     }
-    for (let index = 0; index < state.cells.length && state.status === 'running'; index += 1) {
+    for (
+      let index = 0;
+      index < state.cells.length && state.status === 'running';
+      index += 1
+    ) {
       const cell = state.cells[index];
-      if (cell.terrain === 'ground' && !cell.hasMine && cell.visibility === 'hidden') {
+      if (
+        cell.terrain === 'ground' &&
+        !cell.hasMine &&
+        cell.visibility === 'hidden'
+      ) {
         state = reveal(state, coordinateOf(state, index), 20 + index);
       }
     }
