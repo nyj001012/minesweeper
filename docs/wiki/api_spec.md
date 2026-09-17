@@ -27,7 +27,7 @@
 
 `GameState`는 `size`, `config`, `cells`, `status`, `minesPlaced`, `totalMineCount`, `revealedSafeCellCount`, `prngState`, `placement`, `startedAtMs`, `endedAtMs`, `observedAtMs`를 갖습니다. `status`는 `ready → running → won | lost`로 전이하며 첫 공개에서 즉시 승리할 수도 있습니다. `placement`는 첫 공개 좌표, 표본 지뢰 비율·개수, 요청 보호 수와 실제 보호 좌표 기록입니다.
 
-`Cell`은 돌 또는 땅입니다. 돌에는 `terrain: 'rock'`만 존재합니다. 숨은 땅은 지뢰 여부·깃발·인접 숫자를 가지고, 열린 땅은 안전 칸 또는 지뢰 칸으로 구분됩니다. UI에는 selector를 거친 `CellView`만 전달합니다. 숨은 칸의 지뢰 여부와 숫자는 뷰에 없습니다. 패배 시 클릭한 지뢰만 공개하며 다른 숨은 지뢰를 일괄 공개하지 않습니다.
+`Cell`은 돌 또는 땅입니다. 돌에는 `terrain: 'rock'`만 존재합니다. 숨은 땅은 지뢰 여부·깃발·인접 숫자를 가지고, 열린 땅은 안전 칸 또는 지뢰 칸으로 구분됩니다. UI에는 selector를 거친 `CellView`만 전달합니다. 숨은 칸의 지뢰 여부와 숫자는 뷰에 없습니다. 패배 시 클릭한 지뢰는 폭발 상태로 표시되고, 깃발 여부와 무관하게 나머지 모든 숨은 지뢰도 함께 공개됩니다.
 
 `GameViewModel`에는 크기, 상태, 공개용 셀 배열, 경과 초, 지뢰 수(배치 전 `null`), 깃발 수, 상태 안내가 있습니다.
 

@@ -202,6 +202,24 @@ export function transitionGame(
       adjacentMineCount: 0,
       isExploded: true,
     };
+    for (let i = 0; i < cells.length; i++) {
+      const other = cells[i];
+      if (
+        i !== index &&
+        other.terrain === 'ground' &&
+        other.hasMine &&
+        other.visibility === 'hidden'
+      ) {
+        cells[i] = {
+          terrain: 'ground',
+          visibility: 'revealed',
+          hasMine: true,
+          isFlagged: false,
+          adjacentMineCount: 0,
+          isExploded: false,
+        };
+      }
+    }
     return {
       ok: true,
       changed: true,
