@@ -161,10 +161,17 @@ test('깃발 없이 모든 안전한 칸을 열면 승리하고 타이머가 멈
     }
     if ((await page.getByRole('status').innerText()).includes('승리')) break;
     await expect(page.getByRole('status')).toContainText('패배');
-    const explosion = await board(page)
+    const explosions = await board(page)
       .getByRole('button', { name: /지뢰 폭발/ })
-      .getAttribute('aria-label');
-    mines.add(explosion!.split(',')[0]);
+      .evaluateAll((elements) =>
+        elements.map(
+          (element) => element.getAttribute('aria-label')!.split(',')[0],
+        ),
+      );
+
+    for (const coordinate of explosions) {
+      mines.add(coordinate);
+    }
   }
   await expect(page.getByRole('status')).toContainText('승리');
   await expect(board(page).getByRole('button', { name: /깃발/ })).toHaveCount(
