@@ -47,6 +47,13 @@ export interface GameConfig {
   readonly rockRatio: number;
   readonly maxRockClusterSize: number;
   readonly adjacentProtectionWeights: AdjacentProtectionWeights;
+  /**
+   * Upper bound on the number of candidate mine layouts `placeMines` will
+   * generate-and-check with `solveBoard` before falling back to the
+   * best-effort (fewest unresolved cells) candidate. Must be a positive
+   * integer (see `INVALID_MAX_GENERATION_ATTEMPTS` in validation.ts).
+   */
+  readonly maxGenerationAttempts: number;
 }
 
 /**
@@ -103,6 +110,52 @@ export interface MinePlacementRecord {
   readonly requestedAdjacentProtectionCount: number;
   /** May be shorter at an edge or where rocks remove candidates. */
   readonly protectedCoordinates: readonly Coordinate[];
+  /**
+   * True when a candidate that `solveBoard` proved fully solvable was found
+   * within `config.maxGenerationAttempts` tries. False when the budget was
+   * exhausted and the best-effort fallback (candidate with the fewest
+   * `unresolvedCellCount`, first-seen wins ties) was retained instead.
+   */
+  readonly guaranteedNoGuess: boolean;
+  /**
+   * Number of candidate generations attempted (1..=config.maxGenerationAttempts)
+   * before the final placement was accepted. Exists for observability and for
+   * the frontend-qa performance/behavior tests in section 6-7; not otherwise
+   * consumed by UI. Addition beyond the issue's minimum ask — flagged here as
+   * a deliberate, additive, backward-compatible extension.
+   */
+  readonly attemptsUsed: number;
+}
+
+export interface SolverInput {
+  readonly size: BoardSize;
+  /**
+   * Row-major cells (index = row * columns + column), identical shape to
+   * `GameState.cells`, with the full ground-truth mine layout of the
+   * *candidate* already assigned (i.e. this is `Cell[]` as produced right
+   * before `placeMines` would normally return — all non-rock cells still
+   * carry `visibility: 'hidden'`; `hasMine`/`adjacentMineCount` are the
+   * ground truth for this candidate).
+   */
+  readonly cells: readonly Cell[];
+  /** The coordinate the player clicked first. Guaranteed `hasMine === false` by the caller's protection policy. */
+  readonly firstReveal: Coordinate;
+}
+
+export interface SolverResult {
+  /**
+   * True iff every ground cell's mine/safe status can be derived by pure
+   * logical deduction (see section 2.3) starting from the cells revealed by
+   * simulating the first-click cascade, with zero guessing required.
+   */
+  readonly solvable: boolean;
+  /**
+   * Count of ground cells whose mine/safe status remains logically
+   * undetermined after the deduction loop reaches a fixed point.
+   * MUST be exactly 0 when `solvable` is `true`.
+   * MUST be > 0 when `solvable` is `false`.
+   */
+  readonly unresolvedCellCount: number;
 }
 
 /** Aggregate root. Cells use row-major indexing: row * columns + column. */
@@ -159,6 +212,7 @@ export type SetupErrorCode =
   | 'INVALID_ROCK_RATIO'
   | 'INVALID_ROCK_CLUSTER_SIZE'
   | 'INVALID_PROTECTION_WEIGHTS'
+  | 'INVALID_MAX_GENERATION_ATTEMPTS'
   | 'INSUFFICIENT_MINE_CANDIDATES'
   | 'INVALID_SEED'
   | 'INVALID_TIMESTAMP';
@@ -274,6 +328,7 @@ export interface BoardSetupViewModel {
 /** Runtime implementations of the public contract. */
 export { createGame, transitionGame } from '../features/game/engine/game';
 export { parseBoardSize } from '../features/game/engine/validation';
+export { solveBoard } from '../features/game/engine/solver';
 export {
   selectGameViewModel,
   getElapsedSeconds,

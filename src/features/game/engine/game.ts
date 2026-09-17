@@ -13,6 +13,7 @@ import { DEFAULT_GAME_CONFIG } from '../config/defaults';
 import { validateSetup } from './validation';
 import { adjacent, coordinateOf, createTerrain } from './board';
 import { randomSource, shuffle } from './random';
+import { solveBoard } from './solver';
 
 export function createGame(action: NewGameAction): GameSetupResult {
   const supplied = action.config ?? DEFAULT_GAME_CONFIG;
@@ -63,8 +64,19 @@ export function createGame(action: NewGameAction): GameSetupResult {
   };
 }
 
-function placeMines(state: GameState, index: number, nowMs: number): GameState {
-  const random = randomSource(state.prngState);
+interface MineCandidate {
+  readonly cells: Cell[];
+  readonly mineCount: number;
+  readonly sampledMineRatio: number;
+  readonly requestedAdjacentProtectionCount: number;
+  readonly protectedIndices: number[];
+}
+
+function generateMineCandidate(
+  state: GameState,
+  index: number,
+  random: ReturnType<typeof randomSource>,
+): MineCandidate {
   const sampledMineRatio =
     state.config.mineRatio.min +
     random.next() * (state.config.mineRatio.max - state.config.mineRatio.min);
@@ -107,22 +119,63 @@ function placeMines(state: GameState, index: number, nowMs: number): GameState {
         },
   );
   return {
-    ...state,
     cells,
+    mineCount,
+    sampledMineRatio,
+    requestedAdjacentProtectionCount,
+    protectedIndices,
+  };
+}
+
+function placeMines(state: GameState, index: number, nowMs: number): GameState {
+  const random = randomSource(state.prngState);
+  const firstReveal = coordinateOf(state.size, index);
+  const maxAttempts = state.config.maxGenerationAttempts;
+  let best: MineCandidate | null = null;
+  let bestUnresolved = Infinity;
+  let accepted: MineCandidate | null = null;
+  let attemptsUsed = 0;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    attemptsUsed = attempt;
+    const candidate = generateMineCandidate(state, index, random);
+    const { solvable, unresolvedCellCount } = solveBoard({
+      size: state.size,
+      cells: candidate.cells,
+      firstReveal,
+    });
+    if (unresolvedCellCount < bestUnresolved) {
+      bestUnresolved = unresolvedCellCount;
+      best = candidate;
+    }
+    if (solvable) {
+      accepted = candidate;
+      break;
+    }
+  }
+  const guaranteedNoGuess = accepted !== null;
+  // maxAttempts is validated to be >= 1, so the loop above always runs at
+  // least once and `best` is always assigned.
+  const finalCandidate = accepted ?? (best as MineCandidate);
+  return {
+    ...state,
+    cells: finalCandidate.cells,
     minesPlaced: true,
-    totalMineCount: mineCount,
+    totalMineCount: finalCandidate.mineCount,
     status: 'running',
     startedAtMs: nowMs,
     observedAtMs: nowMs,
     prngState: random.state,
     placement: {
-      sampledMineRatio,
-      mineCount,
-      firstReveal: coordinateOf(state.size, index),
-      requestedAdjacentProtectionCount,
-      protectedCoordinates: protectedIndices.map((i) =>
+      sampledMineRatio: finalCandidate.sampledMineRatio,
+      mineCount: finalCandidate.mineCount,
+      firstReveal,
+      requestedAdjacentProtectionCount:
+        finalCandidate.requestedAdjacentProtectionCount,
+      protectedCoordinates: finalCandidate.protectedIndices.map((i) =>
         coordinateOf(state.size, i),
       ),
+      guaranteedNoGuess,
+      attemptsUsed,
     },
   };
 }
