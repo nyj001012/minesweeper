@@ -305,6 +305,47 @@ describe('game transitions', () => {
     }
   });
 
+  it('reveals every remaining mine on loss, marking only the clicked one as exploded and clearing any flag', () => {
+    const initial = createAcceptedGame(12, 12, 307, 0);
+    const safe = coordinateOf(
+      initial,
+      initial.cells.findIndex((cell) => cell.terrain === 'ground'),
+    );
+    const running = reveal(initial, safe, 1_000);
+
+    const mineIndexes = running.cells.flatMap((cell, index) =>
+      cell.terrain === 'ground' && cell.hasMine ? [index] : [],
+    );
+    expect(mineIndexes.length).toBeGreaterThan(1);
+
+    const [clickedIndex, flaggedIndex] = mineIndexes;
+    const flaggedState = applyTransition(
+      transitionGame(running, {
+        type: 'toggle-flag',
+        coordinate: coordinateOf(running, flaggedIndex),
+        nowMs: 1_500,
+      }),
+    );
+
+    const lost = reveal(
+      flaggedState,
+      coordinateOf(flaggedState, clickedIndex),
+      2_500,
+    );
+
+    expect(lost.status).toBe('lost');
+    for (const index of mineIndexes) {
+      expect(lost.cells[index]).toMatchObject({
+        terrain: 'ground',
+        visibility: 'revealed',
+        hasMine: true,
+        isFlagged: false,
+        adjacentMineCount: 0,
+        isExploded: index === clickedIndex,
+      });
+    }
+  });
+
   it('wins when every non-mine ground cell is open regardless of wrong flags', () => {
     const initial = createAcceptedGame(5, 5, 712, 0);
     const first = coordinateOf(
