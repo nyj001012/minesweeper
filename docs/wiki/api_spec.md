@@ -12,7 +12,7 @@
 | `selectGameViewModel(state)`     | `GameState`                                              | UI용 `GameViewModel`                               |
 | `getElapsedSeconds(state)`       | `GameState`                                              | 내림한 경과 초, 미시작 시 0                        |
 
-`createGame`에는 `type: 'new-game'`, `size: { rows, columns }`, `seed`, `nowMs`, 선택적 `config`를 전달합니다. 행·열은 5~40 정수, seed는 0~4294967295 정수, 시각은 유한한 0 이상 밀리초입니다. `parseBoardSize`는 숫자로만 이루어진 문자열을 받으며 공백·소수·지수 표기를 거부합니다.
+`createGame`에는 `type: 'new-game'`, `size: { rows, columns }`, `seed`, `nowMs`, 선택적 `config`를 전달합니다. 행·열은 5~40 정수, seed는 0~4294967295 정수, 시각은 유한한 0 이상 밀리초입니다. `parseBoardSize`는 숫자로만 이루어진 문자열을 받으며 공백·소수·지수 표기를 거부합니다. `config` 객체는 `maxGenerationAttempts`(기본값 200, 무추측 배치 재시도 최대 횟수)를 포함할 수 있습니다.
 
 | action.type    | 추가 payload                           | 동작                                   |
 | -------------- | -------------------------------------- | -------------------------------------- |
@@ -25,7 +25,7 @@
 
 ## 상태와 반환 스키마
 
-`GameState`는 `size`, `config`, `cells`, `status`, `minesPlaced`, `totalMineCount`, `revealedSafeCellCount`, `prngState`, `placement`, `startedAtMs`, `endedAtMs`, `observedAtMs`를 갖습니다. `status`는 `ready → running → won | lost`로 전이하며 첫 공개에서 즉시 승리할 수도 있습니다. `placement`는 첫 공개 좌표, 표본 지뢰 비율·개수, 요청 보호 수와 실제 보호 좌표 기록입니다.
+`GameState`는 `size`, `config`, `cells`, `status`, `minesPlaced`, `totalMineCount`, `revealedSafeCellCount`, `prngState`, `placement`, `startedAtMs`, `endedAtMs`, `observedAtMs`를 갖습니다. `status`는 `ready → running → won | lost`로 전이하며 첫 공개에서 즉시 승리할 수도 있습니다. `placement`는 첫 공개 좌표, 표본 지뢰 비율·개수, 요청 보호 수와 실제 보호 좌표, `guaranteedNoGuess`(예산 내에 순수 논리로 풀 수 있는 배치였는지), `attemptsUsed`(실제 시도 횟수)를 기록합니다.
 
 `Cell`은 돌 또는 땅입니다. 돌에는 `terrain: 'rock'`만 존재합니다. 숨은 땅은 지뢰 여부·깃발·인접 숫자를 가지고, 열린 땅은 안전 칸 또는 지뢰 칸으로 구분됩니다. UI에는 selector를 거친 `CellView`만 전달합니다. 숨은 칸의 지뢰 여부와 숫자는 뷰에 없습니다. 패배 시 클릭한 지뢰는 폭발 상태로 표시되고, 깃발 여부와 무관하게 나머지 모든 숨은 지뢰도 함께 공개됩니다.
 
@@ -51,6 +51,7 @@
 | `INVALID_ROCK_RATIO`                        | 유한한 `0 ≤ ratio < 1` 위반 또는 덩어리 제한에 맞는 배치 실패 |
 | `INVALID_ROCK_CLUSTER_SIZE`                 | 1~4 정수 위반                                                 |
 | `INVALID_PROTECTION_WEIGHTS`                | 양의 정수 8개·합계 100 위반                                   |
+| `INVALID_MAX_GENERATION_ATTEMPTS`           | 1 이상의 정수 위반 (무추측 배치 재시도 최대 횟수)             |
 | `INSUFFICIENT_MINE_CANDIDATES`              | 최대 보호 범위를 고려한 지뢰 후보 부족                        |
 | `INVALID_SEED`                              | uint32 범위 위반                                              |
 | `INVALID_TIMESTAMP`                         | 시각이 음수 또는 유한하지 않음                                |
