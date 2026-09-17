@@ -11,4 +11,5 @@ export const DEFAULT_GAME_CONFIG: Readonly<GameConfig> = Object.freeze({
   adjacentProtectionWeights: Object.freeze([
     5, 10, 15, 20, 20, 15, 10, 5,
   ] as const),
+  maxGenerationAttempts: 200,
 });

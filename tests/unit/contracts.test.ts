@@ -20,6 +20,7 @@ describe('public game contract', () => {
       rockRatio: 0.08,
       maxRockClusterSize: 4,
       adjacentProtectionWeights: [5, 10, 15, 20, 20, 15, 10, 5],
+      maxGenerationAttempts: 200,
     });
     expect(
       DEFAULT_GAME_CONFIG.adjacentProtectionWeights.every(Number.isInteger),
@@ -35,6 +36,11 @@ describe('public game contract', () => {
         0,
       ),
     ).toBe(100);
+    // Contract: issue-5 section 3 — must be a positive integer, default 200.
+    expect(Number.isInteger(DEFAULT_GAME_CONFIG.maxGenerationAttempts)).toBe(
+      true,
+    );
+    expect(DEFAULT_GAME_CONFIG.maxGenerationAttempts).toBeGreaterThanOrEqual(1);
   });
 
   it.each([

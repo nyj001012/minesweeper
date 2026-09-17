@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_GAME_CONFIG,
+  createGame,
   getElapsedSeconds,
   selectGameViewModel,
   transitionGame,
@@ -154,6 +155,112 @@ describe('game generation', () => {
         });
       }
     }
+  });
+
+  it('records a guaranteedNoGuess placement for typical boards under the default attempt budget', () => {
+    // Contract: issue-5 section 4/6 — most ordinary boards should be fully
+    // solvable by `solveBoard` well within the default 200-attempt budget,
+    // so `placement.guaranteedNoGuess` should be true for the large
+    // majority of seeds. This is a statistical regression guard (not every
+    // seed is guaranteed solvable) rather than an absolute assertion.
+    let guaranteed = 0;
+    const seeds = Array.from({ length: 20 }, (_, index) => index + 1);
+    for (const seed of seeds) {
+      const initial = createAcceptedGame(10, 10, seed, 0);
+      const firstIndex = initial.cells.findIndex(
+        (cell) => cell.terrain === 'ground',
+      );
+      const state = reveal(initial, coordinateOf(initial, firstIndex), 0);
+      expect(state.placement).not.toBeNull();
+      const placement = state.placement!;
+      expect(placement.attemptsUsed).toBeGreaterThanOrEqual(1);
+      expect(placement.attemptsUsed).toBeLessThanOrEqual(
+        state.config.maxGenerationAttempts,
+      );
+      if (placement.guaranteedNoGuess) guaranteed += 1;
+    }
+    expect(guaranteed).toBeGreaterThanOrEqual(Math.ceil(seeds.length * 0.8));
+  });
+
+  it('never throws and still produces a fully playable board when the attempt budget is exhausted', () => {
+    // Contract: issue-5 section 4 fallback tie-break policy — forcing
+    // maxGenerationAttempts to 1 makes it likely (though not certain per
+    // seed) that at least some seeds exhaust the budget and fall back to
+    // the best-effort candidate. Regardless of outcome, game creation must
+    // never throw and the resulting board must remain fully playable.
+    let sawFallback = false;
+    for (let seed = 1; seed <= 25; seed += 1) {
+      const result = createGame({
+        type: 'new-game',
+        size: { rows: 12, columns: 12 },
+        seed,
+        nowMs: 0,
+        config: { ...DEFAULT_GAME_CONFIG, maxGenerationAttempts: 1 },
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      const initial = result.state;
+      const firstIndex = initial.cells.findIndex(
+        (cell) => cell.terrain === 'ground',
+      );
+      const state = reveal(initial, coordinateOf(initial, firstIndex), 0);
+      expect(state.placement).not.toBeNull();
+      const placement = state.placement!;
+      expect(placement.attemptsUsed).toBe(1);
+      expect(state.totalMineCount).toBeGreaterThan(0);
+      expect(
+        state.cells.filter((cell) => cell.terrain === 'ground' && cell.hasMine),
+      ).toHaveLength(state.totalMineCount);
+      if (!placement.guaranteedNoGuess) sawFallback = true;
+    }
+    expect(sawFallback).toBe(true);
+  });
+
+  it('produces byte-for-byte identical placement metadata (including guaranteedNoGuess/attemptsUsed) for a repeated seed', () => {
+    const first = reveal(
+      createAcceptedGame(10, 10, 4242, 0),
+      { row: 0, column: 0 },
+      0,
+    );
+    const second = reveal(
+      createAcceptedGame(10, 10, 4242, 0),
+      { row: 0, column: 0 },
+      0,
+    );
+    expect(second).toEqual(first);
+    expect(second.placement?.guaranteedNoGuess).toBe(
+      first.placement?.guaranteedNoGuess,
+    );
+    expect(second.placement?.attemptsUsed).toBe(first.placement?.attemptsUsed);
+  });
+
+  it('leaves first-click protection, rock generation, and mine ratio sampling unaffected by the new generate-and-check loop', () => {
+    // Regression guard: the no-guess retry loop (issue-5) must not alter
+    // the existing protection/ratio/rock invariants already covered above
+    // — it only decides *which* otherwise-valid candidate is kept.
+    const initial = createAcceptedGame(20, 17, 829, 1_000);
+    const clickedIndex = initial.cells.findIndex(
+      (cell) => cell.terrain === 'ground',
+    );
+    const clicked = coordinateOf(initial, clickedIndex);
+    const state = reveal(initial, clicked, 1_000);
+    expect(state.cells[indexOf(state, clicked)]).toMatchObject({
+      hasMine: false,
+    });
+    expect(state.placement).not.toBeNull();
+    const placement = state.placement!;
+    expect(placement.sampledMineRatio).toBeGreaterThanOrEqual(0.13);
+    expect(placement.sampledMineRatio).toBeLessThanOrEqual(0.17);
+    for (const protectedCoordinate of placement.protectedCoordinates) {
+      expect(state.cells[indexOf(state, protectedCoordinate)]).toMatchObject({
+        terrain: 'ground',
+        hasMine: false,
+      });
+    }
+    const rocks = state.cells.filter((cell) => cell.terrain === 'rock');
+    expect(rocks).toHaveLength(
+      Math.round(20 * 17 * DEFAULT_GAME_CONFIG.rockRatio),
+    );
   });
 
   it('uses all weighted protection buckets across a deterministic seed sweep', () => {

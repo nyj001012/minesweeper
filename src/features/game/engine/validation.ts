@@ -109,6 +109,11 @@ export function validateSetup(
   )
     add('INVALID_PROTECTION_WEIGHTS');
   if (
+    !Number.isInteger(config.maxGenerationAttempts) ||
+    config.maxGenerationAttempts < 1
+  )
+    add('INVALID_MAX_GENERATION_ATTEMPTS');
+  if (
     !Number.isInteger(action.seed) ||
     action.seed < 0 ||
     action.seed > 0xffffffff

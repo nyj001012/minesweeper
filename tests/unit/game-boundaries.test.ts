@@ -59,6 +59,10 @@ describe('setup validation boundaries', () => {
       'INVALID_PROTECTION_WEIGHTS',
     ],
     [{ mineRatio: { min: 0.99, max: 0.99 } }, 'INSUFFICIENT_MINE_CANDIDATES'],
+    [{ maxGenerationAttempts: 0 }, 'INVALID_MAX_GENERATION_ATTEMPTS'],
+    [{ maxGenerationAttempts: -1 }, 'INVALID_MAX_GENERATION_ATTEMPTS'],
+    [{ maxGenerationAttempts: 1.5 }, 'INVALID_MAX_GENERATION_ATTEMPTS'],
+    [{ maxGenerationAttempts: NaN }, 'INVALID_MAX_GENERATION_ATTEMPTS'],
   ];
 
   it.each(invalidConfigs)('rejects config %j with %s', (override, code) => {
@@ -74,6 +78,29 @@ describe('setup validation boundaries', () => {
       errors: expect.arrayContaining([expect.objectContaining({ code })]),
     });
   });
+
+  it.each([1, 200])(
+    'accepts a valid positive integer maxGenerationAttempts of %i',
+    (maxGenerationAttempts) => {
+      const result = createGame({
+        type: 'new-game',
+        size: { rows: 5, columns: 5 },
+        seed: 1,
+        nowMs: 0,
+        config: { ...DEFAULT_GAME_CONFIG, maxGenerationAttempts },
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        expect(result.errors).not.toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              code: 'INVALID_MAX_GENERATION_ATTEMPTS',
+            }),
+          ]),
+        );
+      }
+    },
+  );
 });
 
 describe('transition rejection and no-op boundaries', () => {
